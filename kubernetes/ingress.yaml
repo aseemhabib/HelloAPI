@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+
+metadata:
+  name: api-ingress
+
+spec:
+  ingressClassName: traefik
+
+  rules:
+    - http:
+        paths:
+
+          - path: /api/hello
+            pathType: Prefix
+            backend:
+              service:
+                name: hello-api-service
+                port:
+                  number: 80
+
+          - path: /api/user
+            pathType: Prefix
+            backend:
+              service:
+                name: user-api-service
+                port:
+                  number: 80

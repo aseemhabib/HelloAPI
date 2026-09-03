@@ -1,0 +1,28 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "C#: Hello Api Debug",
+            "type": "dotnet",
+            "request": "launch",
+            "projectPath": "${workspaceFolder}/HelloApi/HelloApi.csproj"
+        },
+
+        {
+            "name": "C#: User Api Debug",
+            "type": "dotnet",
+            "request": "launch",
+            "projectPath": "${workspaceFolder}/UserApi/UserApi.csproj"
+        }
+
+    ],
+    "compounds": [
+        {
+            "name": "Compound",
+            "configurations": ["C#: Hello Api Debug", "C#: User Api Debug"]
+        }
+    ]
+}
