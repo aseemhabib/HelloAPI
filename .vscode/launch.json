@@ -8,14 +8,14 @@
             "name": "C#: Hello Api Debug",
             "type": "dotnet",
             "request": "launch",
-            "projectPath": "${workspaceFolder}/HelloApi/HelloApi.csproj"
+            "projectPath": "${workspaceFolder}/backend/HelloApi/HelloApi.csproj"
         },
 
         {
             "name": "C#: User Api Debug",
             "type": "dotnet",
             "request": "launch",
-            "projectPath": "${workspaceFolder}/UserApi/UserApi.csproj"
+            "projectPath": "${workspaceFolder}/backend/UserApi/UserApi.csproj"
         }
 
     ],

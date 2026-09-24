@@ -33,6 +33,10 @@ spec:
           ports:
             - containerPort: 8080
 
+          volumeMounts:
+            - name: data-protection-keys
+              mountPath: /var/lib/aspnet-dpkeys
+
           readinessProbe:
             httpGet:
               path: /health/ready
@@ -56,3 +60,11 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+
+            - name: ConnectionStrings__Postgres
+              value: "Host=host.docker.internal;Port=5432;Database=labdb;Username=postgres;Password=postgres123"
+
+      volumes:
+        - name: data-protection-keys
+          persistentVolumeClaim:
+            claimName: user-api-data-protection
