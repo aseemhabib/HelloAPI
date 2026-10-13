@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.Extensions.Caching.Distributed;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,7 +44,24 @@ builder.Services
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(
+        "AdminOnly",
+        policy =>
+        {
+            policy.RequireRole("Admin");
+        });
+
+    options.AddPolicy(
+        "SupportOrAdmin",
+        policy =>
+        {
+            policy.RequireRole(
+                "Support",
+                "Admin");
+        });
+});
 
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo("/var/lib/aspnet-dpkeys"))
@@ -52,6 +71,26 @@ builder.Services.AddAntiforgery(options =>
 {
     options.HeaderName = "X-CSRF-TOKEN";
 });
+
+var redisHost =
+    builder.Configuration["REDIS_HOST"]
+    ?? throw new InvalidOperationException(
+        "REDIS_HOST is missing.");
+
+var redisPort =
+    builder.Configuration["REDIS_PORT"]
+    ?? throw new InvalidOperationException(
+        "REDIS_PORT is missing.");
+
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration =
+        $"{redisHost}:{redisPort}";
+
+    options.InstanceName =
+        "LoadBalancerLab:";
+});
+
 
 var app = builder.Build();
 
@@ -151,6 +190,10 @@ app.MapPost("/api/auth/login",
             new(ClaimTypes.Email, user.Email),
             new(ClaimTypes.Name, $"{user.FirstName} {user.LastName}")
         };
+        foreach (var role in user.Roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
 
         var identity = new ClaimsIdentity(
             claims,
@@ -172,6 +215,11 @@ app.MapPost("/api/auth/login",
     app.MapGet("/api/auth/me",
     (ClaimsPrincipal user) =>
     {
+        var roles = user
+            .FindAll(ClaimTypes.Role)
+            .Select(c => c.Value)
+            .ToArray();
+
         return Results.Ok(new
         {
             Id = user.FindFirstValue(
@@ -181,7 +229,9 @@ app.MapPost("/api/auth/login",
                 ClaimTypes.Email),
 
             Name = user.FindFirstValue(
-                ClaimTypes.Name)
+                ClaimTypes.Name),
+
+            Roles = roles
         });
     })
     .RequireAuthorization();
@@ -209,6 +259,97 @@ app.MapPost("/api/auth/login",
         });
     })
     .RequireAuthorization();
+
+    app.MapGet("/api/admin/test", () =>
+    {
+        return Results.Ok(
+            new
+            {
+                message = "Admin access granted."
+            });
+    })
+    .RequireAuthorization("AdminOnly");
+
+    app.MapGet("/api/support/test", () =>
+    {
+        return Results.Ok(
+            new
+            {
+                message = "Support access granted."
+            });
+    })
+    .RequireAuthorization("SupportOrAdmin");
+
+    app.MapGet("/api/cpu-test", () =>
+    {
+        var end = DateTime.UtcNow.AddMilliseconds(500);
+
+        while (DateTime.UtcNow < end)
+        {
+            Math.Sqrt(Random.Shared.NextDouble());
+        }
+
+        return Results.Ok(new
+        {
+            message = "CPU work completed",
+            machinename = Environment.MachineName
+        });
+    });
+
+    app.MapGet(
+    "/api/dashboard/summary",
+    async (
+        IUserRepository repository,
+        IDistributedCache cache,
+        ILogger<Program> logger,
+        CancellationToken cancellationToken) =>
+    {
+
+        logger.LogInformation("Cache Implementation: {CacheType}", cache.GetType().FullName);
+
+        const string cacheKey = "dashboard:summary";
+
+        var cachedJson =
+            await cache.GetStringAsync(
+                cacheKey,
+                cancellationToken);
+
+        if (cachedJson is not null)
+        {
+            logger.LogInformation(
+                "Dashboard cache HIT");
+
+            var cachedSummary =
+                JsonSerializer.Deserialize<DashboardSummary>(
+                    cachedJson);
+
+            return Results.Ok(cachedSummary);
+        }
+
+        logger.LogInformation(
+            "Dashboard cache MISS");
+
+        var summary =
+            await repository.GetDashboardSummaryAsync(
+                cancellationToken);
+
+        var json =
+            JsonSerializer.Serialize(summary);
+
+        await cache.SetStringAsync(
+            cacheKey,
+            json,
+            new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow =
+                    TimeSpan.FromSeconds(30)
+            },
+            cancellationToken);
+
+        return Results.Ok(summary);
+    })
+    .RequireAuthorization();
+
 
 // app.UseHttpsRedirection();
 
@@ -253,3 +394,9 @@ public sealed record LoginResponse(
     string FirstName,
     string LastName,
     string Email);
+
+public sealed record DashboardSummary(
+    int TotalUsers,
+    int UsersLastSevenDays,
+    int AdminUsers,
+    int NormalUsers);

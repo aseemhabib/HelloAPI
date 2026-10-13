@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { login } from "../api/auth";
 import { useNavigate } from "react-router";
+import { useAuth } from "../auth/AuthContext";
 
 function LoginPage() {
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -17,14 +19,14 @@ function LoginPage() {
     setMessage("");
 
     try {
-      const user = await login({
+      await login({
         email,
         password,
       });
-
+      await refreshUser();
       navigate("/me", { replace: true });
 
-      setMessage(`Welcome ${user.firstName}!`);
+      //setMessage(`Welcome ${user.firstName}!`);
     } catch (error) {
       if (error instanceof Error) {
         setMessage(error.message);
@@ -41,7 +43,7 @@ function LoginPage() {
       <h1>Sign In</h1>
 
       <form onSubmit={handleSubmit}>
-        <div>
+        <div className="input-group mb-3">
           <label htmlFor="email">Email</label>
           <br />
 
@@ -49,12 +51,13 @@ function LoginPage() {
             id="email"
             type="email"
             value={email}
+            className="form-control"
             onChange={(event) => setEmail(event.target.value)}
             required
           />
         </div>
 
-        <div>
+        <div className="input-group mb-3">
           <label htmlFor="password">Password</label>
           <br />
 
@@ -62,6 +65,7 @@ function LoginPage() {
             id="password"
             type="password"
             value={password}
+            className="form-control"
             onChange={(event) => setPassword(event.target.value)}
             required
           />
@@ -69,7 +73,7 @@ function LoginPage() {
 
         <br />
 
-        <button type="submit" disabled={isSubmitting}>
+        <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
           {isSubmitting ? "Signing in..." : "Sign in"}
         </button>
       </form>

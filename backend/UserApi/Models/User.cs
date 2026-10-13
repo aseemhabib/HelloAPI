@@ -10,4 +10,6 @@ public sealed class User
     public string PasswordHash { get; set; } = "";
 
     public DateTime CreatedUtc { get; set; }
+
+    public List<string> Roles { get; set; } = [];
 }

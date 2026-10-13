@@ -14,6 +14,7 @@ export interface CurrentUser {
   id: string;
   email: string;
   name: string;
+  roles: string[];
 }
 
 export async function login(

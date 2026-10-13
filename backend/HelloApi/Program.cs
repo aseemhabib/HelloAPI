@@ -25,17 +25,21 @@ app.MapGet("/api/hello", () =>
     return Results.Ok(new { message = $"Hello from {instanceName}!", instance = instanceName, machinename = Environment.MachineName, timestamputc = DateTime.UtcNow });
 });
 
-app.MapGet("/api/cpu-test", () =>
-{
-    var end = DateTime.UtcNow.AddMilliseconds(500);
+// app.MapGet("/api/cpu-test", () =>
+// {
+//     var end = DateTime.UtcNow.AddMilliseconds(500);
 
-    while (DateTime.UtcNow < end)
-    {
-        Math.Sqrt(Random.Shared.NextDouble());
-    }
+//     while (DateTime.UtcNow < end)
+//     {
+//         Math.Sqrt(Random.Shared.NextDouble());
+//     }
 
-    return Results.Ok("CPU work completed");
-});
+//     return Results.Ok(new
+//     {
+//         message = "CPU work completed",
+//         machinename = Environment.MachineName
+//     });
+// });
 
 
 // // Configure the HTTP request pipeline.
